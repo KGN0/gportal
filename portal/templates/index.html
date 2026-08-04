@@ -1,0 +1,1382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Government Certificate Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        // Check for saved dark mode preference immediately to prevent flicker
+        if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+
+        tailwind.config = {
+            darkMode: 'class', // Enables toggleable dark mode via a 'dark' class on the html element
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: '#0D47A1',
+                        secondary: '#1565C0',
+                        bglight: '#F5F7FA',
+                        textdark: '#333333',
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        /* Custom Styles for smooth transitions and hidden elements */
+        body { font-family: 'Inter', sans-serif; transition: background-color 0.3s ease, color 0.3s ease; }
+        .page-section { display: none; opacity: 0; transition: opacity 0.3s ease-in-out; }
+        .page-section.active { display: block; opacity: 1; }
+        
+        .form-input { 
+            width: 100%; 
+            padding-left: 1rem; padding-right: 1rem; 
+            padding-top: 0.5rem; padding-bottom: 0.5rem; 
+            border-width: 1px; border-color: #d1d5db; border-radius: 0.375rem; 
+            transition-property: all; transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); transition-duration: 300ms;
+            background-color: #ffffff;
+            color: #111827;
+        }
+        .form-input:focus { 
+            outline: 2px solid transparent; outline-offset: 2px;
+            --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
+            --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) #1565C0;
+            box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);
+            border-color: transparent;
+        }
+        .form-label { 
+            display: block; font-size: 0.875rem; line-height: 1.25rem; font-weight: 500; color: #374151; margin-bottom: 0.25rem; transition: color 0.3s ease;
+        }
+        .btn-primary { 
+            background-color: #0D47A1; color: #ffffff; font-weight: 500; 
+            padding-top: 0.5rem; padding-bottom: 0.5rem; padding-left: 1.5rem; padding-right: 1.5rem; 
+            border-radius: 0.375rem; transition-property: all; transition-duration: 300ms;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        }
+        .btn-primary:hover { background-color: #1565C0; }
+        .btn-primary:disabled { opacity: 0.7; cursor: not-allowed; }
+        
+        /* Dark Mode Specific Overrides */
+        .dark .form-input { background-color: #374151; border-color: #4b5563; color: #f9fafb; }
+        .dark .form-input:focus { --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) #3b82f6; }
+        .dark .form-label { color: #d1d5db; }
+        .dark .modal-content { background-color: #1f2937; color: #f9fafb; }
+        
+        .progress-step { display: flex; flex-direction: column; align-items: center; position: relative; z-index: 10; }
+        .step-icon { 
+            width: 2.5rem; height: 2.5rem; border-radius: 9999px; display: flex; align-items: center; justify-content: center; 
+            border-width: 2px; background-color: #ffffff; transition-property: all; transition-duration: 300ms; 
+        }
+        .dark .step-icon { background-color: #1f2937; border-color: #4b5563; color: #9ca3af; }
+        
+        .step-active .step-icon { border-color: #1565C0; color: #1565C0; font-weight: 700; }
+        .dark .step-active .step-icon { border-color: #3b82f6; color: #3b82f6; }
+        
+        .step-completed .step-icon { background-color: #22c55e; border-color: #22c55e; color: #ffffff; }
+        
+        .progress-line { position: absolute; top: 1.25rem; left: 50%; width: 100%; height: 0.25rem; background-color: #d1d5db; z-index: -10; }
+        .dark .progress-line { background-color: #4b5563; }
+        
+        .progress-line-active { position: absolute; top: 1.25rem; left: 50%; width: 100%; height: 0.25rem; background-color: #22c55e; z-index: -10; transition-property: all; transition-duration: 500ms; }
+        
+        /* Modal styling */
+        .modal { display: none; position: fixed; z-index: 50; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); backdrop-filter: blur(3px); }
+        .modal-content { background-color: #fefefe; margin: 10% auto; padding: 0; border: none; width: 90%; max-width: 450px; border-radius: 12px; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); transition: background-color 0.3s ease; }
+        #msg-modal .modal-content { padding: 24px; text-align: center; }
+    </style>
+</head>
+
+<body class="flex flex-col min-h-screen bg-bglight dark:bg-gray-900 text-textdark dark:text-gray-100">
+
+    <header class="bg-white dark:bg-gray-800 shadow-md sticky top-0 z-40 transition-colors duration-300">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-20">
+                <!-- Logo -->
+                <div class="flex-shrink-0 flex items-center cursor-pointer" onclick="navigateTo('home')">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg" alt="Gov Logo" class="h-10 w-auto mr-3 dark:brightness-200">
+                    <div class="flex flex-col">
+                        <span class="text-xl font-bold text-primary dark:text-blue-400 leading-tight">Government</span>
+                        <span class="text-sm font-semibold text-gray-600 dark:text-gray-300 leading-tight">Certificate Portal</span>
+                    </div>
+                </div>
+
+                <!-- Desktop Menu -->
+                <nav class="hidden md:flex space-x-6 lg:space-x-8 items-center">
+                    <a href="javascript:void(0)" onclick="navigateTo('home')" class="text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-blue-400 font-medium transition-colors">Home</a>
+                    
+                    <div class="relative group">
+                        <button class="text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-blue-400 font-medium flex items-center transition-colors focus:outline-none">
+                            Apply <i class="fas fa-chevron-down ml-1 text-xs"></i>
+                        </button>
+                        <div class="absolute left-0 mt-2 w-48 bg-white dark:bg-gray-700 rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 border border-gray-100 dark:border-gray-600">
+                            <div class="py-1">
+                                <a href="javascript:void(0)" onclick="navigateTo('apply-aadhaar')" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 hover:text-primary dark:hover:text-blue-300">Aadhaar Mobile Update</a>
+                                <a href="javascript:void(0)" onclick="navigateTo('apply-pan')" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 hover:text-primary dark:hover:text-blue-300">PAN Card</a>
+                                <a href="javascript:void(0)" onclick="navigateTo('apply-voter')" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 hover:text-primary dark:hover:text-blue-300">Voter ID</a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <a href="javascript:void(0)" onclick="navigateTo('track')" class="text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-blue-400 font-medium transition-colors">Track Status</a>
+                    <a href="javascript:void(0)" onclick="navigateTo('download')" class="text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-blue-400 font-medium transition-colors">Download</a>
+                    <a href="javascript:void(0)" onclick="navigateTo('contact')" class="text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-blue-400 font-medium transition-colors">Contact</a>
+                    
+                    <!-- Dark Mode Toggle Button (Desktop) -->
+                    <button id="theme-toggle-desktop" type="button" class="text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none rounded-lg text-sm p-2 transition-colors">
+                        <i id="theme-toggle-dark-icon-desktop" class="fas fa-moon hidden text-lg"></i>
+                        <i id="theme-toggle-light-icon-desktop" class="fas fa-sun hidden text-lg"></i>
+                    </button>
+
+                    <button id="desktop-login-btn" class="btn-primary" onclick="navigateTo('login')">Login</button>
+                </nav>
+
+                <!-- Mobile menu buttons -->
+                <div class="md:hidden flex items-center space-x-2">
+                    <!-- Dark Mode Toggle Button (Mobile) -->
+                    <button id="theme-toggle-mobile" type="button" class="text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none rounded-lg text-sm p-2 transition-colors">
+                        <i id="theme-toggle-dark-icon-mobile" class="fas fa-moon hidden text-lg"></i>
+                        <i id="theme-toggle-light-icon-mobile" class="fas fa-sun hidden text-lg"></i>
+                    </button>
+                    
+                    <button id="mobile-menu-btn" class="text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-blue-400 focus:outline-none p-2">
+                        <i class="fas fa-bars text-2xl"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="hidden md:hidden bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 transition-colors">
+            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                <a href="javascript:void(0)" onclick="navigateTo('home', true)" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-200 hover:text-primary hover:bg-bglight dark:hover:bg-gray-700">Home</a>
+                <div class="px-3 py-2 text-base font-medium text-gray-700 dark:text-gray-400">Apply Services</div>
+                <a href="javascript:void(0)" onclick="navigateTo('apply-aadhaar', true)" class="block pl-6 pr-3 py-2 rounded-md text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-primary hover:bg-bglight dark:hover:bg-gray-700">- Aadhaar Update</a>
+                <a href="javascript:void(0)" onclick="navigateTo('apply-pan', true)" class="block pl-6 pr-3 py-2 rounded-md text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-primary hover:bg-bglight dark:hover:bg-gray-700">- PAN Card</a>
+                <a href="javascript:void(0)" onclick="navigateTo('apply-voter', true)" class="block pl-6 pr-3 py-2 rounded-md text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-primary hover:bg-bglight dark:hover:bg-gray-700">- Voter ID</a>
+                <a href="javascript:void(0)" onclick="navigateTo('track', true)" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-200 hover:text-primary hover:bg-bglight dark:hover:bg-gray-700">Track Status</a>
+                <a href="javascript:void(0)" onclick="navigateTo('download', true)" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-200 hover:text-primary hover:bg-bglight dark:hover:bg-gray-700">Download</a>
+                <a href="javascript:void(0)" onclick="navigateTo('contact', true)" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-200 hover:text-primary hover:bg-bglight dark:hover:bg-gray-700">Contact</a>
+                <div class="px-3 py-3">
+                    <button id="mobile-login-btn" class="btn-primary w-full" onclick="navigateTo('login', true)">Login</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow">
+        
+        <section id="home" class="page-section active">
+            <!-- Hero Section -->
+            <div class="bg-white dark:bg-gray-800 transition-colors duration-300">
+                <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-20 flex flex-col lg:flex-row items-center">
+                    <div class="lg:w-1/2 lg:pr-12 mb-10 lg:mb-0">
+                        <h1 class="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white leading-tight mb-6">
+                            Apply Government <br><span class="text-primary dark:text-blue-400">Certificates Online</span>
+                        </h1>
+                        <p class="text-lg text-gray-600 dark:text-gray-300 mb-8">
+                            A simple, secure and fast way to apply for your essential government certificates.
+                        </p>
+                        <ul class="space-y-4 mb-8">
+                            <li class="flex items-center text-gray-700 dark:text-gray-200 font-medium">
+                                <i class="fas fa-check-circle text-green-500 mr-3 text-xl"></i> Aadhaar Mobile Update
+                            </li>
+                            <li class="flex items-center text-gray-700 dark:text-gray-200 font-medium">
+                                <i class="fas fa-check-circle text-green-500 mr-3 text-xl"></i> PAN Card Application
+                            </li>
+                            <li class="flex items-center text-gray-700 dark:text-gray-200 font-medium">
+                                <i class="fas fa-check-circle text-green-500 mr-3 text-xl"></i> Voter ID Application
+                            </li>
+                        </ul>
+                        <button onclick="document.getElementById('services').scrollIntoView({behavior: 'smooth'})" class="btn-primary text-lg px-8 py-3 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all">
+                            Apply Now
+                        </button>
+                    </div>
+                    <div class="lg:w-1/2 flex justify-center">
+                        <!-- Simulated Hero Image -->
+                        <div class="relative w-full max-w-lg">
+                            <div class="absolute inset-0 bg-primary opacity-10 dark:opacity-20 rounded-full blur-3xl"></div>
+                            <div class="relative bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 flex flex-col items-center transition-colors duration-300">
+                                <i class="fas fa-laptop text-8xl text-gray-800 dark:text-gray-200 mb-4"></i>
+                                <div class="flex space-x-4">
+                                    <div class="bg-blue-50 dark:bg-gray-700 p-4 rounded-xl shadow-sm text-center transition-colors">
+                                        <i class="fas fa-fingerprint text-primary dark:text-blue-400 text-2xl mb-2"></i>
+                                        <p class="text-xs font-semibold dark:text-gray-200">Aadhaar</p>
+                                    </div>
+                                    <div class="bg-blue-50 dark:bg-gray-700 p-4 rounded-xl shadow-sm text-center transition-colors">
+                                        <i class="fas fa-id-card text-primary dark:text-blue-400 text-2xl mb-2"></i>
+                                        <p class="text-xs font-semibold dark:text-gray-200">PAN Card</p>
+                                    </div>
+                                     <div class="bg-blue-50 dark:bg-gray-700 p-4 rounded-xl shadow-sm text-center transition-colors">
+                                        <i class="fas fa-vote-yea text-primary dark:text-blue-400 text-2xl mb-2"></i>
+                                        <p class="text-xs font-semibold dark:text-gray-200">Voter ID</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Services Section -->
+            <div id="services" class="container mx-auto px-4 sm:px-6 lg:px-8 py-16">
+                <div class="text-center mb-12">
+                    <h2 class="text-3xl font-bold text-gray-900 dark:text-white mb-4">Our Services</h2>
+                    <div class="h-1 w-20 bg-primary dark:bg-blue-500 mx-auto rounded"></div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+                    <!-- Service 1 -->
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 border border-gray-100 dark:border-gray-700 flex flex-col items-center text-center p-8">
+                        <div class="w-20 h-20 bg-blue-50 dark:bg-gray-700 rounded-full flex items-center justify-center mb-6">
+                            <img src="https://upload.wikimedia.org/wikipedia/en/thumb/c/cf/Aadhaar_Logo.svg/1200px-Aadhaar_Logo.svg.png" alt="Aadhaar" class="w-12 h-12 object-contain">
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-3">Aadhaar Mobile Update</h3>
+                        <p class="text-gray-600 dark:text-gray-400 mb-8 flex-grow">Update your registered mobile number linked with Aadhaar online securely.</p>
+                        <button onclick="navigateTo('apply-aadhaar')" class="btn-primary w-full max-w-[200px]">Apply</button>
+                    </div>
+
+                    <!-- Service 2 -->
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 border border-gray-100 dark:border-gray-700 flex flex-col items-center text-center p-8">
+                         <div class="w-20 h-20 bg-blue-50 dark:bg-gray-700 rounded-full flex items-center justify-center mb-6">
+                            <span class="text-primary dark:text-blue-400 font-bold text-2xl">PAN</span>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-3">PAN Card</h3>
+                        <p class="text-gray-600 dark:text-gray-400 mb-8 flex-grow">Apply for a new Permanent Account Number (PAN) card for financial transactions.</p>
+                        <button onclick="navigateTo('apply-pan')" class="btn-primary w-full max-w-[200px]">Apply</button>
+                    </div>
+
+                    <!-- Service 3 -->
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 border border-gray-100 dark:border-gray-700 flex flex-col items-center text-center p-8">
+                         <div class="w-20 h-20 bg-blue-50 dark:bg-gray-700 rounded-full flex items-center justify-center mb-6">
+                            <i class="fas fa-id-badge text-primary dark:text-blue-400 text-3xl"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-3">Voter ID</h3>
+                        <p class="text-gray-600 dark:text-gray-400 mb-8 flex-grow">Apply for a new Voter ID card to exercise your democratic rights.</p>
+                        <button onclick="navigateTo('apply-voter')" class="btn-primary w-full max-w-[200px]">Apply</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Why Choose Us -->
+            <div class="bg-white dark:bg-gray-800 py-12 border-t border-gray-200 dark:border-gray-700 transition-colors duration-300">
+                <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+                        <div class="p-4">
+                            <i class="fas fa-shield-alt text-3xl text-secondary dark:text-blue-400 mb-3"></i>
+                            <h4 class="font-bold text-gray-800 dark:text-gray-200">Secure</h4>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">Your data is safe and protected</p>
+                        </div>
+                        <div class="p-4">
+                            <i class="fas fa-bolt text-3xl text-secondary dark:text-blue-400 mb-3"></i>
+                            <h4 class="font-bold text-gray-800 dark:text-gray-200">Fast Processing</h4>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">Quick verification and updates</p>
+                        </div>
+                        <div class="p-4">
+                            <i class="fas fa-search-location text-3xl text-secondary dark:text-blue-400 mb-3"></i>
+                            <h4 class="font-bold text-gray-800 dark:text-gray-200">Online Tracking</h4>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">Track your application in real time</p>
+                        </div>
+                        <div class="p-4">
+                            <i class="fas fa-download text-3xl text-secondary dark:text-blue-400 mb-3"></i>
+                            <h4 class="font-bold text-gray-800 dark:text-gray-200">Easy Download</h4>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">Download your application easily</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Application Forms... -->
+        <section id="apply-aadhaar" class="page-section container mx-auto px-4 sm:px-6 lg:px-8 py-12 max-w-4xl">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 sm:p-10 border border-gray-100 dark:border-gray-700 transition-colors duration-300">
+                <div class="text-center mb-10">
+                    <h2 class="text-3xl font-bold text-primary dark:text-blue-400 mb-2">Aadhaar Mobile Number Update</h2>
+                    <p class="text-gray-600 dark:text-gray-400">Update your registered mobile number linked with Aadhaar</p>
+                </div>
+
+                <form id="form-aadhaar" onsubmit="handleFormSubmit(event, 'Aadhaar Mobile Update', '/api/submit-aadhaar/')">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <div>
+                            <label class="form-label" for="a-name">Full Name *</label>
+                            <input type="text" id="a-name" name="name" class="form-input" placeholder="Enter your full name" required>
+                        </div>
+                        <div>
+                            <label class="form-label" for="a-number">Aadhaar Number *</label>
+                            <input type="text" id="a-number" name="aadhaar_number" class="form-input" placeholder="Enter 12 digit Aadhaar number" pattern="\d{12}" title="12 digit number" required>
+                        </div>
+                        <div>
+                            <label class="form-label" for="a-dob">Date of Birth *</label>
+                            <input type="date" id="a-dob" name="dob" class="form-input" required>
+                        </div>
+                        <div>
+                            <label class="form-label" for="a-old-mobile">Current Mobile Number *</label>
+                            <input type="tel" id="a-old-mobile" name="old_mobile" class="form-input" placeholder="Enter current mobile number" pattern="\d{10}" required>
+                        </div>
+                        <div>
+                            <label class="form-label" for="a-new-mobile">New Mobile Number *</label>
+                            <input type="tel" id="a-new-mobile" name="new_mobile" class="form-input" placeholder="Enter new mobile number" pattern="\d{10}" required>
+                        </div>
+                        <div>
+                            <label class="form-label" for="a-email">Email ID</label>
+                            <input type="email" id="a-email" name="email" class="form-input" placeholder="Enter email address">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="form-label" for="a-address">Address *</label>
+                            <textarea id="a-address" name="address" rows="3" class="form-input" placeholder="Enter your full address" required></textarea>
+                        </div>
+                        <div class="md:col-span-2 border-t dark:border-gray-700 pt-4">
+                            <label class="form-label font-semibold">Upload Aadhaar Card Copy *</label>
+                            <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 dark:border-gray-600 border-dashed rounded-md bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+                                <div class="space-y-1 text-center">
+                                    <i class="fas fa-cloud-upload-alt text-3xl text-gray-400 dark:text-gray-500 mb-3"></i>
+                                    <div class="flex text-sm text-gray-600 justify-center">
+                                        <label for="a-file" class="relative cursor-pointer bg-white dark:bg-gray-800 rounded-md font-medium text-primary dark:text-blue-400 hover:text-secondary focus-within:outline-none px-2 py-1 shadow-sm border dark:border-gray-600">
+                                            <span>Choose File</span>
+                                            <input id="a-file" name="document" type="file" class="sr-only" accept=".jpg,.jpeg,.png,.pdf" required onchange="updateFileName(this)">
+                                        </label>
+                                        <p class="pl-2 pt-1 dark:text-gray-400" id="a-file-name">No file chosen</p>
+                                    </div>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400">Upload JPG, PNG or PDF (Max 2MB)</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex justify-center mt-8">
+                        <button type="submit" class="btn-primary w-full md:w-auto px-10 py-3 text-lg">Submit Application</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <section id="apply-pan" class="page-section container mx-auto px-4 sm:px-6 lg:px-8 py-12 max-w-4xl">
+             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 sm:p-10 border border-gray-100 dark:border-gray-700 transition-colors duration-300">
+                <div class="text-center mb-10">
+                    <h2 class="text-3xl font-bold text-primary dark:text-blue-400 mb-2">PAN Card Application</h2>
+                    <p class="text-gray-600 dark:text-gray-400">Fill the details below to apply for new PAN Card</p>
+                </div>
+
+                <form id="form-pan" onsubmit="handleFormSubmit(event, 'PAN Card', '/api/submit-pan/')">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <div>
+                            <label class="form-label" for="p-name">Full Name *</label>
+                            <input type="text" id="p-name" name="name" class="form-input" placeholder="Enter your full name" required>
+                        </div>
+                        <div>
+                            <label class="form-label" for="p-fname">Father's Name *</label>
+                            <input type="text" id="p-fname" name="father_name" class="form-input" placeholder="Enter father's name" required>
+                        </div>
+                        <div>
+                            <label class="form-label" for="p-dob">Date of Birth *</label>
+                            <input type="date" id="p-dob" name="dob" class="form-input" required>
+                        </div>
+                        <div>
+                            <label class="form-label" for="p-gender">Gender *</label>
+                            <select id="p-gender" name="gender" class="form-input" required>
+                                <option value="" disabled selected>Select Gender</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="form-label" for="p-mobile">Mobile Number *</label>
+                            <input type="tel" id="p-mobile" name="mobile" class="form-input" placeholder="Enter mobile number" pattern="\d{10}" required>
+                        </div>
+                        <div>
+                            <label class="form-label" for="p-email">Email ID</label>
+                            <input type="email" id="p-email" name="email" class="form-input" placeholder="Enter email address">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="form-label" for="p-address">Full Address *</label>
+                            <textarea id="p-address" name="address" rows="3" class="form-input" placeholder="Enter your full address" required></textarea>
+                        </div>
+                        
+                        <div class="border-t dark:border-gray-700 pt-4">
+                            <label class="form-label font-semibold">Identity Proof *</label>
+                            <div class="flex items-center mt-2">
+                                <label class="cursor-pointer bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600">
+                                    Choose File
+                                    <input type="file" name="identity_proof" class="sr-only" required onchange="updateFileName(this)">
+                                </label>
+                                <span class="ml-3 text-sm text-gray-500 dark:text-gray-400 file-name-display">No file chosen</span>
+                            </div>
+                        </div>
+                        <div class="border-t dark:border-gray-700 pt-4">
+                            <label class="form-label font-semibold">Address Proof *</label>
+                            <div class="flex items-center mt-2">
+                                <label class="cursor-pointer bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600">
+                                    Choose File
+                                    <input type="file" name="address_proof" class="sr-only" required onchange="updateFileName(this)">
+                                </label>
+                                <span class="ml-3 text-sm text-gray-500 dark:text-gray-400 file-name-display">No file chosen</span>
+                            </div>
+                        </div>
+                        <div class="border-t dark:border-gray-700 pt-4 md:col-span-2">
+                            <label class="form-label font-semibold">Passport Size Photo *</label>
+                            <div class="flex items-center mt-2">
+                                <label class="cursor-pointer bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600">
+                                    Choose File
+                                    <input type="file" name="photo" accept="image/*" class="sr-only" required onchange="updateFileName(this)">
+                                </label>
+                                <span class="ml-3 text-sm text-gray-500 dark:text-gray-400 file-name-display">No file chosen</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex justify-center mt-8">
+                        <button type="submit" class="btn-primary w-full md:w-auto px-10 py-3 text-lg">Submit Application</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <section id="apply-voter" class="page-section container mx-auto px-4 sm:px-6 lg:px-8 py-12 max-w-4xl">
+             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 sm:p-10 border border-gray-100 dark:border-gray-700 transition-colors duration-300">
+                <div class="text-center mb-10">
+                    <h2 class="text-3xl font-bold text-primary dark:text-blue-400 mb-2">Voter ID Application</h2>
+                    <p class="text-gray-600 dark:text-gray-400">Fill the details below to apply for new Voter ID</p>
+                </div>
+
+                <form id="form-voter" onsubmit="handleFormSubmit(event, 'Voter ID', '/api/submit-voter/')">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <div>
+                            <label class="form-label" for="v-name">Full Name *</label>
+                            <input type="text" id="v-name" name="name" class="form-input" placeholder="Enter your full name" required>
+                        </div>
+                        <div>
+                            <label class="form-label" for="v-fname">Father's Name *</label>
+                            <input type="text" id="v-fname" name="father_name" class="form-input" placeholder="Enter father's name" required>
+                        </div>
+                        <div>
+                            <label class="form-label" for="v-age">Age *</label>
+                            <input type="number" id="v-age" name="age" class="form-input" placeholder="Enter your age" min="18" required>
+                        </div>
+                        <div>
+                            <label class="form-label" for="v-dob">Date of Birth *</label>
+                            <input type="date" id="v-dob" name="dob" class="form-input" required>
+                        </div>
+                        <div>
+                            <label class="form-label" for="v-gender">Gender *</label>
+                            <select id="v-gender" name="gender" class="form-input" required>
+                                <option value="" disabled selected>Select Gender</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="form-label" for="v-mobile">Mobile Number *</label>
+                            <input type="tel" id="v-mobile" name="mobile" class="form-input" placeholder="Enter mobile number" pattern="\d{10}" required>
+                        </div>
+                         <div>
+                            <label class="form-label" for="v-email">Email ID</label>
+                            <input type="email" id="v-email" name="email" class="form-input" placeholder="Enter email address">
+                        </div>
+                        <div>
+                            <label class="form-label" for="v-const">Constituency / Assembly *</label>
+                            <input type="text" id="v-const" name="constituency" class="form-input" placeholder="Enter constituency" required>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="form-label" for="v-address">Full Address *</label>
+                            <textarea id="v-address" name="address" rows="3" class="form-input" placeholder="Enter your full address" required></textarea>
+                        </div>
+                        
+                        <div class="border-t dark:border-gray-700 pt-4">
+                            <label class="form-label font-semibold">Photo *</label>
+                            <div class="flex items-center mt-2">
+                                <label class="cursor-pointer bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600">
+                                    Choose File
+                                    <input type="file" name="photo" accept="image/*" class="sr-only" required onchange="updateFileName(this)">
+                                </label>
+                                <span class="ml-3 text-sm text-gray-500 dark:text-gray-400 file-name-display">No file chosen</span>
+                            </div>
+                        </div>
+                        <div class="border-t dark:border-gray-700 pt-4">
+                            <label class="form-label font-semibold">Address Proof *</label>
+                            <div class="flex items-center mt-2">
+                                <label class="cursor-pointer bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600">
+                                    Choose File
+                                    <input type="file" name="proof" class="sr-only" required onchange="updateFileName(this)">
+                                </label>
+                                <span class="ml-3 text-sm text-gray-500 dark:text-gray-400 file-name-display">No file chosen</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex justify-center mt-8">
+                        <button type="submit" class="btn-primary w-full md:w-auto px-10 py-3 text-lg">Submit Application</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <!-- Track Section (UPDATED FOR EMAIL) -->
+        <section id="track" class="page-section container mx-auto px-4 sm:px-6 lg:px-8 py-12 max-w-5xl">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 sm:p-10 border border-gray-100 dark:border-gray-700 transition-colors duration-300">
+                <div class="text-center mb-10">
+                    <h2 class="text-3xl font-bold text-primary dark:text-blue-400 mb-2">Track Application Status</h2>
+                    <p class="text-gray-600 dark:text-gray-400">Enter your details to track your application status</p>
+                </div>
+
+                <form id="form-track" onsubmit="handleTrack(event)" class="max-w-2xl mx-auto mb-10">
+                    <div class="flex flex-col sm:flex-row gap-4 items-end">
+                        <div class="w-full">
+                            <label class="form-label" for="t-app-id">Application ID *</label>
+                            <input type="text" id="t-app-id" class="form-input" placeholder="Enter Application ID" required>
+                        </div>
+                        <div class="w-full">
+                            <label class="form-label" for="t-email">Registered Email Address *</label>
+                            <input type="email" id="t-email" class="form-input" placeholder="Enter registered email" required>
+                        </div>
+                        <button type="submit" class="btn-primary w-full sm:w-auto px-8 py-2 h-[42px] whitespace-nowrap">Track Status</button>
+                    </div>
+                </form>
+
+                <!-- Status Output Area (Hidden initially) -->
+                <div id="track-result" class="hidden border-t border-gray-200 dark:border-gray-700 pt-8 mt-4">
+                    <div class="bg-bglight dark:bg-gray-700 rounded-lg p-6 mb-8 overflow-x-auto transition-colors">
+                        <table class="w-full text-sm text-left">
+                            <thead class="text-xs text-gray-500 dark:text-gray-300 uppercase border-b dark:border-gray-600">
+                                <tr>
+                                    <th class="px-4 py-3 font-medium">Application ID</th>
+                                    <th class="px-4 py-3 font-medium">Applicant Name</th>
+                                    <th class="px-4 py-3 font-medium">Certificate Type</th>
+                                    <th class="px-4 py-3 font-medium">Applied Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td id="res-app-id" class="px-4 py-4 font-semibold text-gray-900 dark:text-white"></td>
+                                    <td id="res-name" class="px-4 py-4 font-semibold text-gray-900 dark:text-white"></td>
+                                    <td id="res-type" class="px-4 py-4 font-semibold text-gray-900 dark:text-white"></td>
+                                    <td id="res-date" class="px-4 py-4 font-semibold text-gray-900 dark:text-white"></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-6 px-2">Current Status</h3>
+                    
+                    <div class="relative w-full max-w-3xl mx-auto px-4 sm:px-10 mb-8">
+                        <div id="progress-line" class="progress-line"></div>
+                        <div id="progress-line-active" class="progress-line-active w-0"></div>
+                        
+                        <div class="flex justify-between relative z-10">
+                            <!-- Steps... -->
+                            <div class="progress-step step-completed" id="step-1">
+                                <div class="step-icon"><i class="fas fa-check"></i></div>
+                                <p class="text-xs font-semibold mt-2 text-gray-700 dark:text-gray-300">Submitted</p>
+                            </div>
+                            <div class="progress-step step-active" id="step-2">
+                                <div class="step-icon"><i class="fas fa-file-signature"></i></div>
+                                <p class="text-xs font-semibold mt-2 text-gray-700 dark:text-gray-300">Under Review</p>
+                            </div>
+                            <div class="progress-step" id="step-3">
+                                <div class="step-icon"><i class="fas fa-thumbs-up"></i></div>
+                                <p class="text-xs font-semibold mt-2 text-gray-700 dark:text-gray-300">Approved</p>
+                            </div>
+                            <div class="progress-step" id="step-4">
+                                <div class="step-icon"><i class="fas fa-truck-fast"></i></div>
+                                <p class="text-xs font-semibold mt-2 text-gray-700 dark:text-gray-300">Completed</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="status-message" class="text-center font-medium p-4 rounded-md"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Download Section (UPDATED FOR EMAIL) -->
+        <section id="download" class="page-section container mx-auto px-4 sm:px-6 lg:px-8 py-12 max-w-4xl">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 sm:p-10 border border-gray-100 dark:border-gray-700 transition-colors duration-300">
+                <div class="text-center mb-10">
+                    <h2 class="text-3xl font-bold text-primary dark:text-blue-400 mb-2">Download Application</h2>
+                    <p class="text-gray-600 dark:text-gray-400">Verify your details to download your application</p>
+                </div>
+
+                <form id="form-download" onsubmit="handleVerify(event)" class="max-w-2xl mx-auto mb-8">
+                    <div class="flex flex-col sm:flex-row gap-4 items-end">
+                        <div class="w-full">
+                            <label class="form-label" for="d-app-id">Application ID *</label>
+                            <input type="text" id="d-app-id" class="form-input" placeholder="Enter Application ID" required>
+                        </div>
+                        <div class="w-full">
+                            <label class="form-label" for="d-email">Registered Email Address *</label>
+                            <input type="email" id="d-email" class="form-input" placeholder="Enter registered email" required>
+                        </div>
+                        <button type="submit" class="btn-primary w-full sm:w-auto px-8 py-2 h-[42px]">Verify</button>
+                    </div>
+                </form>
+
+                <div id="download-result" class="hidden border-t border-gray-200 dark:border-gray-700 pt-8 mt-4">
+                     <div class="bg-white dark:bg-gray-700 border dark:border-gray-600 rounded-lg p-0 mb-8 overflow-x-auto shadow-sm transition-colors">
+                        <table class="w-full text-sm text-left">
+                            <thead class="text-xs text-gray-500 dark:text-gray-300 uppercase bg-gray-50 dark:bg-gray-800 border-b dark:border-gray-600">
+                                <tr>
+                                    <th class="px-4 py-3">Application ID</th>
+                                    <th class="px-4 py-3">Applicant Name</th>
+                                    <th class="px-4 py-3">Certificate Type</th>
+                                    <th class="px-4 py-3">Application Date</th>
+                                    <th class="px-4 py-3">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td id="dl-app-id" class="px-4 py-4 font-semibold text-gray-900 dark:text-white"></td>
+                                    <td id="dl-name" class="px-4 py-4 font-semibold text-gray-900 dark:text-white"></td>
+                                    <td id="dl-type" class="px-4 py-4 font-semibold text-gray-900 dark:text-white"></td>
+                                    <td id="dl-date" class="px-4 py-4 font-semibold text-gray-900 dark:text-white"></td>
+                                    <td class="px-4 py-4"><span id="dl-status" class="px-2 py-1 text-xs font-semibold rounded-full"></span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="bg-blue-50 dark:bg-gray-700 border border-blue-100 dark:border-gray-600 rounded-lg p-8 text-center transition-colors">
+                        <p class="text-gray-700 dark:text-gray-200 font-medium mb-2">Your application has been verified.</p>
+                        <p class="text-gray-600 dark:text-gray-400 mb-6 text-sm">You can download your application details below.</p>
+                        <button id="actual-download-btn" class="btn-primary flex items-center justify-center mx-auto px-6 py-3">
+                            <i class="fas fa-file-csv mr-2"></i> Download CSV
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Contact Section -->
+        <section id="contact" class="page-section container mx-auto px-4 sm:px-6 lg:px-8 py-12 max-w-5xl">
+            <!-- (Contact content remains the same) -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden border border-gray-100 dark:border-gray-700 transition-colors duration-300">
+                <div class="grid grid-cols-1 md:grid-cols-5">
+                    
+                    <div class="bg-bglight dark:bg-gray-900 p-8 md:col-span-2 flex flex-col justify-between transition-colors">
+                        <div>
+                            <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-6">Contact Information</h2>
+                            <div class="space-y-6">
+                                <div class="flex items-start">
+                                    <div class="w-10 h-10 rounded-full bg-white dark:bg-gray-800 shadow-sm flex items-center justify-center flex-shrink-0 mr-4 border dark:border-gray-700">
+                                        <i class="fas fa-phone text-primary dark:text-blue-400"></i>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm text-gray-500 dark:text-gray-400 font-medium">Call Us</p>
+                                        <p class="text-gray-900 dark:text-gray-200 font-semibold">1800-123-4567</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-start">
+                                    <div class="w-10 h-10 rounded-full bg-white dark:bg-gray-800 shadow-sm flex items-center justify-center flex-shrink-0 mr-4 border dark:border-gray-700">
+                                        <i class="fas fa-envelope text-primary dark:text-blue-400"></i>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm text-gray-500 dark:text-gray-400 font-medium">Email Us</p>
+                                        <p class="text-gray-900 dark:text-gray-200 font-semibold">support@govportal.in</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="p-8 md:col-span-3">
+                        <div class="text-center md:text-left mb-8">
+                            <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Contact Us</h2>
+                            <p class="text-gray-600 dark:text-gray-400 text-sm">We are here to help you</p>
+                        </div>
+                        <form onsubmit="handleContactSubmit(event)">
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="form-label" for="c-name">Full Name *</label>
+                                    <input type="text" id="c-name" class="form-input" placeholder="Enter your name" required>
+                                </div>
+                                <div>
+                                    <label class="form-label" for="c-email">Email ID *</label>
+                                    <input type="email" id="c-email" class="form-input" placeholder="Enter your email" required>
+                                </div>
+                                <div>
+                                    <label class="form-label" for="c-subject">Subject *</label>
+                                    <input type="text" id="c-subject" class="form-input" placeholder="Enter subject" required>
+                                </div>
+                                <div>
+                                    <label class="form-label" for="c-message">Message *</label>
+                                    <textarea id="c-message" rows="4" class="form-input" placeholder="Enter your message" required></textarea>
+                                </div>
+                                <div>
+                                    <button type="submit" class="btn-primary w-full md:w-auto px-8 mt-2">Send Message</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Login Section (UPDATED FOR EMAIL) -->
+        <section id="login" class="page-section container mx-auto px-4 sm:px-6 lg:px-8 py-12 max-w-md">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-8 border border-gray-100 dark:border-gray-700 text-center transition-colors duration-300">
+                <div class="w-16 h-16 bg-blue-50 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-6 transition-colors">
+                    <i class="fas fa-envelope-open-text text-primary dark:text-blue-400 text-2xl"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Citizen Login</h2>
+                <p class="text-sm text-gray-600 dark:text-gray-400 mb-8">Please enter your valid Email Address to receive an OTP.</p>
+                
+                <form onsubmit="handleSendOTP(event)">
+                    <div class="mb-6 text-left">
+                        <label class="form-label" for="l-email">Email Address *</label>
+                        <input type="email" id="l-email" class="form-input text-lg" placeholder="e.g. john@example.com" required>
+                    </div>
+                    <button type="submit" class="btn-primary w-full py-3 text-lg">Send OTP to Email</button>
+                </form>
+            </div>
+        </section>
+
+        <!-- Login OTP Section (UPDATED FOR EMAIL) -->
+        <section id="login-otp" class="page-section container mx-auto px-4 sm:px-6 lg:px-8 py-12 max-w-md">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-8 border border-gray-100 dark:border-gray-700 text-center transition-colors duration-300">
+                <div class="w-16 h-16 bg-blue-50 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4 transition-colors">
+                    <i class="fas fa-key text-primary dark:text-blue-400 text-2xl"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Verify OTP</h2>
+                <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Enter the 6-digit OTP sent to</p>
+                <p class="font-bold text-gray-900 dark:text-white mb-8 tracking-wide truncate px-2" id="display-email">example@email.com</p>
+                
+                <form onsubmit="handleVerifyOTP(event)">
+                    <div class="mb-8">
+                        <label class="form-label text-center block mb-3" for="l-otp">One Time Password *</label>
+                        <div class="flex justify-center gap-2 sm:gap-3 otp-inputs">
+                            <input type="text" maxlength="1" class="w-10 h-12 sm:w-12 sm:h-14 text-center text-xl font-bold border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md focus:ring-2 focus:ring-primary focus:border-transparent transition-colors" required>
+                            <input type="text" maxlength="1" class="w-10 h-12 sm:w-12 sm:h-14 text-center text-xl font-bold border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md focus:ring-2 focus:ring-primary focus:border-transparent transition-colors" required>
+                            <input type="text" maxlength="1" class="w-10 h-12 sm:w-12 sm:h-14 text-center text-xl font-bold border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md focus:ring-2 focus:ring-primary focus:border-transparent transition-colors" required>
+                            <input type="text" maxlength="1" class="w-10 h-12 sm:w-12 sm:h-14 text-center text-xl font-bold border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md focus:ring-2 focus:ring-primary focus:border-transparent transition-colors" required>
+                            <input type="text" maxlength="1" class="w-10 h-12 sm:w-12 sm:h-14 text-center text-xl font-bold border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md focus:ring-2 focus:ring-primary focus:border-transparent transition-colors" required>
+                            <input type="text" maxlength="1" class="w-10 h-12 sm:w-12 sm:h-14 text-center text-xl font-bold border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md focus:ring-2 focus:ring-primary focus:border-transparent transition-colors" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-primary w-full py-3 text-lg mb-4">Verify & Login</button>
+                    <p class="text-sm text-center text-gray-500 dark:text-gray-400">
+                        Didn't receive code? <button type="button" onclick="handleSendOTP(event)" class="text-primary dark:text-blue-400 font-medium hover:underline">Resend OTP</button>
+                    </p>
+                </form>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-primary dark:bg-gray-900 text-white mt-auto transition-colors duration-300">
+        <div class="container mx-auto px-4 py-8 flex flex-col md:flex-row justify-between items-center border-b border-blue-800 dark:border-gray-800">
+            <div class="flex items-center mb-4 md:mb-0">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg" alt="Gov Logo" class="h-8 w-auto mr-2 filter brightness-0 invert">
+                <span class="font-bold text-lg">Government Certificate Portal</span>
+            </div>
+            <div class="flex space-x-6 text-sm">
+                <a href="javascript:void(0)" class="hover:text-blue-200 transition-colors">Privacy Policy</a>
+                <a href="javascript:void(0)" class="hover:text-blue-200 transition-colors">Terms & Conditions</a>
+                <a href="javascript:void(0)" class="hover:text-blue-200 transition-colors" onclick="navigateTo('contact')">Contact Us</a>
+                <a href="javascript:void(0)" class="hover:text-blue-200 transition-colors">Help</a>
+            </div>
+        </div>
+        <div class="bg-secondary dark:bg-black py-3 text-center text-xs text-blue-200 dark:text-gray-400 transition-colors duration-300">
+            &copy; 2026 Government Certificate Portal. All rights reserved.
+        </div>
+    </footer>
+
+    <!-- Custom Message Box -->
+    <div id="msg-modal" class="modal">
+        <div class="modal-content shadow-2xl relative">
+            <button onclick="closeModal('msg-modal')" class="absolute top-2 right-4 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white text-2xl font-bold">&times;</button>
+            <div id="msg-icon" class="text-5xl mb-4"></div>
+            <h3 id="msg-title" class="text-xl font-bold mb-2"></h3>
+            <p id="msg-body" class="text-gray-600 dark:text-gray-300 mb-6 whitespace-pre-line"></p>
+            <button onclick="closeModal('msg-modal')" class="btn-primary px-8">OK</button>
+        </div>
+    </div>
+
+    <script>
+        // --- Dark Mode Logic ---
+        const themeToggleDarkIcons = document.querySelectorAll('#theme-toggle-dark-icon-desktop, #theme-toggle-dark-icon-mobile');
+        const themeToggleLightIcons = document.querySelectorAll('#theme-toggle-light-icon-desktop, #theme-toggle-light-icon-mobile');
+
+        if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            themeToggleLightIcons.forEach(icon => icon.classList.remove('hidden'));
+        } else {
+            themeToggleDarkIcons.forEach(icon => icon.classList.remove('hidden'));
+        }
+
+        const themeToggleBtns = document.querySelectorAll('#theme-toggle-desktop, #theme-toggle-mobile');
+
+        themeToggleBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                themeToggleDarkIcons.forEach(icon => icon.classList.toggle('hidden'));
+                themeToggleLightIcons.forEach(icon => icon.classList.toggle('hidden'));
+
+                if (localStorage.getItem('color-theme')) {
+                    if (localStorage.getItem('color-theme') === 'light') {
+                        document.documentElement.classList.add('dark');
+                        localStorage.setItem('color-theme', 'dark');
+                    } else {
+                        document.documentElement.classList.remove('dark');
+                        localStorage.setItem('color-theme', 'light');
+                    }
+                } else {
+                    if (document.documentElement.classList.contains('dark')) {
+                        document.documentElement.classList.remove('dark');
+                        localStorage.setItem('color-theme', 'light');
+                    } else {
+                        document.documentElement.classList.add('dark');
+                        localStorage.setItem('color-theme', 'dark');
+                    }
+                }
+            });
+        });
+
+        // --- Security & Inactivity Timer ---
+        let isUserLoggedIn = false;
+        let inactivityTimer;
+
+        function resetInactivityTimer() {
+            clearTimeout(inactivityTimer);
+            if (isUserLoggedIn) {
+                inactivityTimer = setTimeout(handleLogout, 900000); 
+            }
+        }
+
+        window.addEventListener('mousemove', resetInactivityTimer);
+        window.addEventListener('keypress', resetInactivityTimer);
+        window.addEventListener('click', resetInactivityTimer);
+        window.addEventListener('scroll', resetInactivityTimer);
+
+        window.addEventListener('pagehide', function() {
+            if (isUserLoggedIn) {
+                navigator.sendBeacon('/api/logout/');
+            }
+        });
+
+        // --- Navigation Logic ---
+        function navigateTo(sectionId, closeMobileMenu = false, pushToHistory = true) {
+            
+            if (['apply-aadhaar', 'apply-pan', 'apply-voter'].includes(sectionId) && !isUserLoggedIn) {
+                showMessage("Login Required", "You must log in to apply for certificates.", "error");
+                navigateTo('login');
+                return;
+            }
+            
+            document.querySelectorAll('.page-section').forEach(el => {
+                el.classList.remove('active');
+            });
+            
+            const target = document.getElementById(sectionId);
+            if(target) {
+                target.classList.add('active');
+                window.scrollTo(0, 0);
+                
+                if (pushToHistory) {
+                    history.pushState({ section: sectionId }, "", `#${sectionId}`);
+                }
+            }
+            
+            if(closeMobileMenu) {
+                document.getElementById('mobile-menu').classList.add('hidden');
+            }
+        }
+
+        window.addEventListener('popstate', function(event) {
+            if (event.state && event.state.section) {
+                navigateTo(event.state.section, false, false);
+            } else {
+                navigateTo('home', false, false);
+            }
+        });
+
+        window.addEventListener('load', async function() {
+            await checkSession();
+            
+            const hash = window.location.hash.replace('#', '');
+            if (hash && document.getElementById(hash)) {
+                navigateTo(hash, false, false);
+                history.replaceState({ section: hash }, "", `#${hash}`);
+            } else {
+                history.replaceState({ section: 'home' }, "", "#home");
+            }
+        });
+
+        document.getElementById('mobile-menu-btn').addEventListener('click', function() {
+            document.getElementById('mobile-menu').classList.toggle('hidden');
+        });
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // --- Login Logic (EMAIL) ---
+        let currentLoginEmail = "";
+
+        async function handleSendOTP(event) {
+            event.preventDefault();
+            const form = event.target.closest('form');
+            const emailInput = form.querySelector('input[type="email"]').value;
+            
+            currentLoginEmail = emailInput;
+            
+            const btn = form.querySelector('button[type="submit"]');
+            const originalText = btn.textContent;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending Email...';
+            btn.disabled = true;
+
+            try {
+                const formData = new URLSearchParams();
+                formData.append('email', emailInput);
+
+                const response = await fetch('/api/send-otp/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    document.getElementById('display-email').textContent = emailInput;
+                    navigateTo('login-otp');
+                    
+                    const otpInputs = document.querySelectorAll('.otp-inputs input');
+                    otpInputs.forEach(input => input.value = '');
+                    if(otpInputs.length > 0) otpInputs[0].focus();
+                } else {
+                    showMessage("Error", data.error || "Failed to send OTP email", "error");
+                }
+            } catch (err) {
+                showMessage("Network Error", "Could not connect to server.", "error");
+            }
+
+            btn.textContent = originalText;
+            btn.disabled = false;
+        }
+
+        const otpInputs = document.querySelectorAll('.otp-inputs input');
+        otpInputs.forEach((input, index) => {
+            input.addEventListener('input', function(e) {
+                this.value = this.value.replace(/[^0-9]/g, '');
+                if (this.value.length === 1 && index < otpInputs.length - 1) {
+                    otpInputs[index + 1].focus();
+                }
+            });
+
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Backspace' && this.value.length === 0 && index > 0) {
+                    otpInputs[index - 1].focus();
+                }
+            });
+        });
+
+        async function handleVerifyOTP(event) {
+            event.preventDefault();
+            
+            let otp = '';
+            document.querySelectorAll('.otp-inputs input').forEach(input => otp += input.value);
+            
+            if (otp.length < 6) {
+                showMessage("Incomplete OTP", "Please enter the complete 6-digit OTP.", "error");
+                return;
+            }
+
+            const btn = event.target.querySelector('button');
+            const originalText = btn.textContent;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...';
+            btn.disabled = true;
+
+            try {
+                const formData = new URLSearchParams();
+                formData.append('email', currentLoginEmail);
+                formData.append('otp', otp);
+
+                const response = await fetch('/api/verify-otp/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    isUserLoggedIn = true;
+                    resetInactivityTimer();
+                    navigateTo('home');
+                    showMessage("Login Successful", "You have successfully logged into the Citizen Portal.", "success");
+                    updateLoginState(true, currentLoginEmail);
+                } else {
+                    showMessage("Verification Failed", data.error || "Invalid OTP.", "error");
+                }
+            } catch (err) {
+                showMessage("Network Error", "Could not connect to server.", "error");
+            }
+
+            btn.textContent = originalText;
+            btn.disabled = false;
+        }
+
+        async function handleLogout() {
+            try {
+                await fetch('/api/logout/', { 
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': getCookie('csrftoken') }
+                });
+            } catch(e) {}
+            
+            isUserLoggedIn = false;
+            clearTimeout(inactivityTimer);
+            updateLoginState(false, "");
+            
+            if (['apply-aadhaar', 'apply-pan', 'apply-voter'].includes(window.location.hash.replace('#', ''))) {
+                 navigateTo('home');
+                 showMessage("Session Expired", "You have been logged out securely.", "info");
+            } else {
+                 showMessage("Logged Out", "You have successfully logged out.", "info");
+            }
+        }
+
+        async function checkSession() {
+            try {
+                const response = await fetch('/api/check-session/');
+                const data = await response.json();
+                
+                if (data.is_logged_in) {
+                    isUserLoggedIn = true;
+                    currentLoginEmail = data.email;
+                    updateLoginState(true, currentLoginEmail);
+                    resetInactivityTimer();
+                }
+            } catch(e) {}
+        }
+
+        function updateLoginState(isLoggedIn, email) {
+            const desktopBtn = document.getElementById('desktop-login-btn');
+            const mobileBtn = document.getElementById('mobile-login-btn');
+            
+            if(isLoggedIn) {
+                 desktopBtn.innerHTML = `<i class="fas fa-sign-out-alt mr-1"></i> Logout`;
+                 desktopBtn.onclick = handleLogout;
+                 desktopBtn.classList.replace('bg-primary', 'bg-red-600');
+                 desktopBtn.classList.replace('hover:bg-secondary', 'hover:bg-red-700');
+                 
+                 mobileBtn.innerHTML = `<i class="fas fa-sign-out-alt mr-1"></i> Logout`;
+                 mobileBtn.onclick = handleLogout;
+                 mobileBtn.classList.replace('bg-primary', 'bg-red-600');
+                 
+            } else {
+                 desktopBtn.innerHTML = `Login`;
+                 desktopBtn.onclick = function() { navigateTo('login'); };
+                 desktopBtn.classList.replace('bg-red-600', 'bg-primary');
+                 desktopBtn.classList.replace('hover:bg-red-700', 'hover:bg-secondary');
+                 
+                 mobileBtn.innerHTML = `Login`;
+                 mobileBtn.onclick = function() { navigateTo('login', true); };
+                 mobileBtn.classList.replace('bg-red-600', 'bg-primary');
+            }
+        }
+        
+        function updateFileName(input) {
+            let displayElement = null;
+            if(input.id === 'a-file') {
+                displayElement = document.getElementById('a-file-name');
+            } else {
+                displayElement = input.parentElement.nextElementSibling;
+            }
+            
+            if (displayElement) {
+                if (input.files && input.files.length > 0) {
+                    displayElement.textContent = input.files[0].name;
+                    displayElement.classList.remove('text-gray-500', 'dark:text-gray-400');
+                    displayElement.classList.add('text-primary', 'dark:text-blue-400', 'font-medium');
+                } else {
+                    displayElement.textContent = 'No file chosen';
+                    displayElement.classList.add('text-gray-500', 'dark:text-gray-400');
+                    displayElement.classList.remove('text-primary', 'dark:text-blue-400', 'font-medium');
+                }
+            }
+        }
+
+        function showMessage(title, message, type = 'info') {
+            const modal = document.getElementById('msg-modal');
+            const titleEl = document.getElementById('msg-title');
+            const bodyEl = document.getElementById('msg-body');
+            const iconEl = document.getElementById('msg-icon');
+
+            titleEl.textContent = title;
+            bodyEl.textContent = message;
+
+            if (type === 'success') {
+                iconEl.innerHTML = '<i class="fas fa-check-circle text-green-500"></i>';
+                titleEl.className = "text-xl font-bold mb-2 text-green-600 dark:text-green-400";
+            } else if (type === 'error') {
+                iconEl.innerHTML = '<i class="fas fa-times-circle text-red-500"></i>';
+                titleEl.className = "text-xl font-bold mb-2 text-red-600 dark:text-red-400";
+            } else {
+                iconEl.innerHTML = '<i class="fas fa-info-circle text-primary dark:text-blue-400"></i>';
+                titleEl.className = "text-xl font-bold mb-2 text-primary dark:text-blue-400";
+            }
+
+            modal.style.display = 'block';
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+
+        window.onclick = function(event) {
+            const msgModal = document.getElementById('msg-modal');
+            if (event.target == msgModal) {
+                msgModal.style.display = "none";
+            }
+        }
+
+        async function handleFormSubmit(event, type, apiUrl) {
+            event.preventDefault();
+            const form = event.target;
+            const btn = form.querySelector('button[type="submit"]');
+            const originalText = btn.innerHTML;
+            
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+            btn.disabled = true;
+
+            const formData = new FormData(form);
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'X-CSRFToken': getCookie('csrftoken') }
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showMessage(
+                        "Application Submitted Successfully!", 
+                        `Your ${type} application has been received and saved securely.\n\nYour Application ID is:\n${data.app_id}\n\nPlease save this ID to track your status.`,
+                        "success"
+                    );
+                    
+                    form.reset();
+                    document.querySelectorAll('.file-name-display').forEach(el => {
+                        el.textContent = 'No file chosen';
+                        el.classList.add('text-gray-500', 'dark:text-gray-400');
+                        el.classList.remove('text-primary', 'dark:text-blue-400');
+                    });
+                    let aFileName = document.getElementById('a-file-name');
+                    if(aFileName) aFileName.textContent = 'No file chosen';
+                } else {
+                    if (response.status === 401) {
+                         showMessage("Session Expired", "Please login again to submit applications.", "error");
+                         navigateTo('login');
+                    } else {
+                        showMessage("Submission Failed", data.error || "Please check your inputs and try again.", "error");
+                    }
+                }
+            } catch (err) {
+                showMessage("Network Error", "Unable to connect to the server. Please try again later.", "error");
+            }
+            
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+
+        // Handle Tracking (UPDATED FOR EMAIL)
+        async function handleTrack(event) {
+            event.preventDefault();
+            const btn = event.target.querySelector('button');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = 'Tracking...';
+            btn.disabled = true;
+
+            const inputId = document.getElementById('t-app-id').value.trim();
+            const inputEmail = document.getElementById('t-email').value.trim();
+            const resultArea = document.getElementById('track-result');
+
+            try {
+                const formData = new FormData();
+                formData.append('app_id', inputId);
+                formData.append('email', inputEmail);
+
+                const response = await fetch('/api/track/', {
+                    method: 'POST', body: formData, headers: { 'X-CSRFToken': getCookie('csrftoken') }
+                });
+                const data = await response.json();
+
+                if (response.ok) {
+                    document.getElementById('res-app-id').textContent = data.app_id;
+                    document.getElementById('res-name').textContent = data.name;
+                    document.getElementById('res-type').textContent = data.type;
+                    document.getElementById('res-date').textContent = data.date;
+
+                    for(let i=1; i<=4; i++) {
+                        const step = document.getElementById(`step-${i}`);
+                        step.className = 'progress-step';
+                    }
+
+                    const statusLvl = parseInt(data.statusLevel);
+                    const lineActive = document.getElementById('progress-line-active');
+                    
+                    document.getElementById('step-1').classList.add('step-completed');
+
+                    if (statusLvl >= 2) {
+                        document.getElementById('step-2').classList.add('step-completed');
+                        lineActive.style.width = '33%';
+                    } else {
+                        document.getElementById('step-2').classList.add('step-active');
+                        lineActive.style.width = '0%';
+                    }
+                    
+                    if (statusLvl >= 3) {
+                        document.getElementById('step-3').classList.add('step-completed');
+                        lineActive.style.width = '66%';
+                    } else if (statusLvl === 2) {
+                        document.getElementById('step-3').classList.add('step-active');
+                    }
+
+                    if (statusLvl >= 4) {
+                        document.getElementById('step-4').classList.add('step-completed');
+                        lineActive.style.width = '100%';
+                    } else if (statusLvl === 3) {
+                        document.getElementById('step-4').classList.add('step-active');
+                    }
+
+                    const msgBox = document.getElementById('status-message');
+                    if (statusLvl === 1) {
+                        msgBox.className = "text-center font-medium p-4 rounded-md bg-blue-50 dark:bg-blue-900 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-700 mt-6";
+                        msgBox.innerHTML = "<i class='fas fa-info-circle mr-2'></i> Your application has been successfully submitted and is awaiting review.";
+                    } else if (statusLvl === 2) {
+                        msgBox.className = "text-center font-medium p-4 rounded-md bg-yellow-50 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 border border-yellow-200 dark:border-yellow-700 mt-6";
+                        msgBox.innerHTML = "<i class='fas fa-clock mr-2'></i> Your application is currently under review by the authorities.";
+                    } else if (statusLvl >= 3) {
+                         msgBox.className = "text-center font-medium p-4 rounded-md bg-green-50 dark:bg-green-900 text-green-800 dark:text-green-200 border border-green-200 dark:border-green-700 mt-6";
+                         msgBox.innerHTML = "<i class='fas fa-check-circle mr-2'></i> Application Approved! Please proceed to the Download section.";
+                    }
+
+                    resultArea.classList.remove('hidden');
+                } else {
+                    resultArea.classList.add('hidden');
+                    showMessage("Not Found", data.error || "No application found matching the provided details.", "error");
+                }
+            } catch (err) {
+                showMessage("Network Error", "Unable to connect to the server.", "error");
+            }
+            
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+
+        async function handleVerify(event) {
+            event.preventDefault();
+            const btn = event.target.querySelector('button');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = 'Verifying...';
+            btn.disabled = true;
+
+            const inputId = document.getElementById('d-app-id').value.trim();
+            const inputEmail = document.getElementById('d-email').value.trim();
+            const resultArea = document.getElementById('download-result');
+
+            try {
+                const formData = new FormData();
+                formData.append('app_id', inputId);
+                formData.append('email', inputEmail);
+
+                const response = await fetch('/api/track/', {
+                    method: 'POST', body: formData, headers: { 'X-CSRFToken': getCookie('csrftoken') }
+                });
+                const data = await response.json();
+
+                if (response.ok) {
+                    
+                    if (parseInt(data.statusLevel) < 3) {
+                         resultArea.classList.add('hidden');
+                         showMessage("Application Not Ready", "Your application is still under process. You can download the document once it is approved.", "info");
+                    } else {
+                        document.getElementById('dl-app-id').textContent = data.app_id;
+                        document.getElementById('dl-name').textContent = data.name;
+                        document.getElementById('dl-type').textContent = data.type;
+                        document.getElementById('dl-date').textContent = data.date;
+                        
+                        const statusBadge = document.getElementById('dl-status');
+                        statusBadge.textContent = "Verified";
+                        statusBadge.className = "px-3 py-1 text-xs font-semibold rounded-full bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200";
+
+                        document.getElementById('actual-download-btn').onclick = () => downloadCSV(inputId, inputEmail);
+
+                        resultArea.classList.remove('hidden');
+                    }
+                } else {
+                    resultArea.classList.add('hidden');
+                    showMessage("Verification Failed", data.error || "Invalid Application ID or Email Address.", "error");
+                }
+            } catch (err) {
+                showMessage("Network Error", "Unable to connect to the server.", "error");
+            }
+            
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+
+        async function downloadCSV(appId, email) {
+            try {
+                const formData = new FormData();
+                formData.append('app_id', appId);
+                formData.append('email', email);
+
+                const response = await fetch('/api/download-csv/', {
+                    method: 'POST', body: formData, headers: { 'X-CSRFToken': getCookie('csrftoken') }
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = `${appId}_Applicant_Data.csv`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    showMessage("Success", "Your CSV file has been downloaded successfully.", "success");
+                } else {
+                    showMessage("Download Failed", "Unable to generate file. Please verify your details.", "error");
+                }
+            } catch (err) {
+                showMessage("Error", "Network error during download.", "error");
+            }
+        }
+
+        function handleContactSubmit(event) {
+            event.preventDefault();
+            showMessage("Message Sent", "Thank you for contacting us. Our team will get back to you shortly.", "success");
+            event.target.reset();
+        }
+    </script>
+</body>
+</html>
